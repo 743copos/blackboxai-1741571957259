@@ -5,27 +5,50 @@ class Player : public Entity {
 public:
     Player() {
         size = Vector2{50, 50};
-        color = RED;
+        color = WHITE;
         position = Vector2{400, 300};
         tag = "player";
+
+        // Add thrust particles
+        auto particles = std::make_shared<ParticleEmitter>();
+        particles->particleColor = ORANGE;
+        particles->particleLifetime = 0.5f;
+        particles->emitRate = 20;
+        particles->particleSpeed = 50.0f;
+        particles->offset = Vector2{-25, 0};
+        AddComponent("particles", particles);
     }
 
     void Update() override {
-        // Frame-independent movement
-        const float speed = 300.0f;  // pixels per second
-        
-        // Reset velocity each frame
         velocity = {0, 0};
+        const float speed = 300.0f;
         
-        if (IsKeyDown(KEY_RIGHT)) velocity.x = speed;
-        else if (IsKeyDown(KEY_LEFT)) velocity.x = -speed;
+        if (IsKeyDown(KEY_RIGHT)) {
+            velocity.x = speed;
+            rotation = 0;
+        }
+        else if (IsKeyDown(KEY_LEFT)) {
+            velocity.x = -speed;
+            rotation = 180;
+        }
 
-        if (IsKeyDown(KEY_DOWN)) velocity.y = speed;
-        else if (IsKeyDown(KEY_UP)) velocity.y = -speed;
+        if (IsKeyDown(KEY_DOWN)) {
+            velocity.y = speed;
+            rotation = 90;
+        }
+        else if (IsKeyDown(KEY_UP)) {
+            velocity.y = -speed;
+            rotation = 270;
+        }
+
+        // Enable particles when moving
+        if (auto particles = GetComponent<ParticleEmitter>("particles")) {
+            particles->emitting = (velocity.x != 0 || velocity.y != 0);
+        }
 
         Entity::Update();
 
-        // Keep player within screen bounds
+        // Screen bounds
         if (position.x < size.x/2) position.x = size.x/2;
         if (position.x > 800 - size.x/2) position.x = 800 - size.x/2;
         if (position.y < size.y/2) position.y = size.y/2;
@@ -35,33 +58,59 @@ public:
 
 class Enemy : public Entity {
 private:
-    float time;
+    float time = 0;
+    float explosionTimer = 0;
+    bool exploding = false;
 
 public:
     Enemy(float x, float y) {
-        size = Vector2{30, 30};
-        color = BLUE;
+        size = Vector2{40, 40};
+        color = RED;
         position = Vector2{x, y};
         tag = "enemy";
-        time = 0;
+
+        // Add explosion particles
+        auto particles = std::make_shared<ParticleEmitter>();
+        particles->particleColor = YELLOW;
+        particles->particleLifetime = 1.0f;
+        particles->emitRate = 0;
+        particles->particleSpeed = 200.0f;
+        AddComponent("particles", particles);
+    }
+
+    void Explode() {
+        if (!exploding) {
+            exploding = true;
+            if (auto particles = GetComponent<ParticleEmitter>("particles")) {
+                particles->emitRate = 100;
+                particles->emitting = true;
+            }
+        }
     }
 
     void Update() override {
-        // Rotate 90 degrees per second
-        rotation += 90.0f * DeltaTime::Get();
-        
-        // Circular movement
-        time += DeltaTime::Get();
-        float radius = 100.0f;
-        position.x = 400 + radius * cos(time);
-        position.y = 300 + radius * sin(time);
+        if (exploding) {
+            explosionTimer += DeltaTime::Get();
+            if (explosionTimer >= 1.0f) {
+                active = false;
+                return;
+            }
+            color.a = static_cast<unsigned char>(255 * (1.0f - explosionTimer));
+        } else {
+            // Circular movement
+            time += DeltaTime::Get();
+            float radius = 100.0f;
+            position.x = 400 + radius * cos(time);
+            position.y = 300 + radius * sin(time);
+            rotation += 90.0f * DeltaTime::Get();
+        }
         
         Entity::Update();
     }
 };
 
 int main() {
-    GameEngine engine(800, 600, "Game Engine Demo");
+    GameEngine engine(800, 600, "Enhanced Game Demo");
     Scene& scene = engine.GetCurrentScene();
 
     // Create player
@@ -72,25 +121,20 @@ int main() {
     scene.AddEntity(std::make_shared<Enemy>(200, 200));
     scene.AddEntity(std::make_shared<Enemy>(600, 400));
 
-    // Setup collision event
-    scene.GetEventSystem().Subscribe("collision", [](void* data) {
-        std::cout << "Collision detected!" << std::endl;
-    });
-
     // Game loop
     while (!engine.ShouldClose()) {
         engine.Clear();
 
-        // Toggle debug mode with F1
+        // Toggle debug mode
         if (IsKeyPressed(KEY_F1)) {
             engine.ToggleDebugMode();
         }
 
-        // Check collisions
+        // Check collisions and trigger explosions
         auto enemies = scene.GetEntitiesByTag("enemy");
         for (auto& enemy : enemies) {
             if (player->CheckCollision(*enemy)) {
-                scene.GetEventSystem().Emit("collision");
+                std::static_pointer_cast<Enemy>(enemy)->Explode();
             }
         }
 
