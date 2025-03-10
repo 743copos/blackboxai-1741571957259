@@ -1,72 +1,80 @@
 #include "GameEngine.hpp"
+#include <iostream>
 
-// Example sprite component
-struct SpriteComponent : public Component {
-    Texture2D texture;
-    SpriteComponent(const std::string& path) {
-        texture = ResourceManager::LoadTexture(path);
-    }
-};
-
-// Example player class with improved features
 class Player : public Entity {
 public:
     Player() {
         size = Vector2{50, 50};
         color = RED;
         position = Vector2{400, 300};
-        tag = "player";  // Tag for easy lookup
+        tag = "player";
     }
 
     void Update() override {
         // Frame-independent movement
         const float speed = 300.0f;  // pixels per second
         
+        // Reset velocity each frame
+        velocity = {0, 0};
+        
         if (IsKeyDown(KEY_RIGHT)) velocity.x = speed;
         else if (IsKeyDown(KEY_LEFT)) velocity.x = -speed;
-        else velocity.x = 0;
 
         if (IsKeyDown(KEY_DOWN)) velocity.y = speed;
         else if (IsKeyDown(KEY_UP)) velocity.y = -speed;
-        else velocity.y = 0;
 
-        // Call parent update for physics
         Entity::Update();
+
+        // Keep player within screen bounds
+        if (position.x < size.x/2) position.x = size.x/2;
+        if (position.x > 800 - size.x/2) position.x = 800 - size.x/2;
+        if (position.y < size.y/2) position.y = size.y/2;
+        if (position.y > 600 - size.y/2) position.y = 600 - size.y/2;
     }
 };
 
-// Example enemy class
 class Enemy : public Entity {
+private:
+    float time;
+
 public:
     Enemy(float x, float y) {
         size = Vector2{30, 30};
         color = BLUE;
         position = Vector2{x, y};
         tag = "enemy";
+        time = 0;
     }
 
     void Update() override {
-        rotation += 45.0f * DeltaTime::Get();  // Rotate 45 degrees per second
+        // Rotate 90 degrees per second
+        rotation += 90.0f * DeltaTime::Get();
+        
+        // Circular movement
+        time += DeltaTime::Get();
+        float radius = 100.0f;
+        position.x = 400 + radius * cos(time);
+        position.y = 300 + radius * sin(time);
+        
         Entity::Update();
     }
 };
 
 int main() {
-    GameEngine engine(800, 600, "Enhanced Example Game");
+    GameEngine engine(800, 600, "Game Engine Demo");
     Scene& scene = engine.GetCurrentScene();
 
     // Create player
     auto player = std::make_shared<Player>();
     scene.AddEntity(player);
 
-    // Create some enemies
+    // Create enemies
     scene.AddEntity(std::make_shared<Enemy>(200, 200));
     scene.AddEntity(std::make_shared<Enemy>(600, 400));
 
-    // Subscribe to collision events
+    // Setup collision event
     scene.GetEventSystem().Subscribe("collision", [](void* data) {
-        // Handle collision event
-        printf("Collision detected!\n");
+        std::cout << "Collision detected!" << std::endl;
     });
 
     // Game loop
@@ -78,7 +86,7 @@ int main() {
             engine.ToggleDebugMode();
         }
 
-        // Check collisions between player and enemies
+        // Check collisions
         auto enemies = scene.GetEntitiesByTag("enemy");
         for (auto& enemy : enemies) {
             if (player->CheckCollision(*enemy)) {
