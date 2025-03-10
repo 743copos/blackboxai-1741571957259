@@ -1,0 +1,29 @@
+[Unit]
+Description=Custom Arch Linux Login Manager
+After=systemd-user-sessions.service plymouth-quit-wait.service
+After=getty@tty1.service
+
+# Conflicts with other display managers
+Conflicts=gdm.service lightdm.service lxdm.service slim.service sddm.service xdm.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/arch-login
+Restart=always
+RestartSec=3
+StandardOutput=syslog
+StandardError=syslog
+
+# Security settings
+PrivateTmp=yes
+DeviceAllow=/dev/dri/card0 rw
+DeviceAllow=/dev/input/* rw
+DeviceAllow=/dev/tty* rw
+
+# Resource limits
+CPUQuota=50%
+MemoryLimit=256M
+
+[Install]
+WantedBy=graphical.target
+Alias=display-manager.service
