@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <functional>
 #include <chrono>
+#include <algorithm>
 
 // Time management for frame-independent movement
 class DeltaTime {
@@ -158,7 +159,10 @@ public:
             } else {
                 if (!(*it)->tag.empty()) {
                     auto& taggedList = taggedEntities[(*it)->tag];
-                    taggedList.erase(std::remove(taggedList.begin(), taggedList.end(), *it), taggedList.end());
+                    auto taggedIt = std::find(taggedList.begin(), taggedList.end(), *it);
+                    if (taggedIt != taggedList.end()) {
+                        taggedList.erase(taggedIt);
+                    }
                 }
                 it = entities.erase(it);
             }
