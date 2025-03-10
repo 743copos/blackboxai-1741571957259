@@ -1,0 +1,188 @@
+RAYLIB GAME ENGINE CHEATSHEET
+============================
+
+1. CREATING NEW ENTITIES
+-----------------------
+class CustomEntity : public Entity {
+    private:
+        float customVar;
+    
+    public:
+        CustomEntity() {
+            size = Vector2{width, height};
+            color = CUSTOM_COLOR;  // e.g., RED, BLUE, GREEN
+            position = Vector2{x, y};
+            tag = "entityTag";     // For easy lookup
+            rotation = 0.0f;       // Optional
+            velocity = Vector2{0, 0};  // Optional
+        }
+
+        void Update() override {
+            // Custom logic here
+            Entity::Update();  // Always call parent update
+        }
+};
+
+2. COMPONENT SYSTEM
+------------------
+// Create component
+struct CustomComponent : public Component {
+    int data;
+    CustomComponent(int value) : data(value) {}
+};
+
+// Add to entity
+entity->AddComponent<CustomComponent>("componentName", 
+    std::make_shared<CustomComponent>(42));
+
+// Retrieve component
+auto comp = entity->GetComponent<CustomComponent>("componentName");
+
+3. EVENT SYSTEM
+--------------
+// Subscribe to events
+scene.GetEventSystem().Subscribe("eventName", [](void* data) {
+    auto* eventData = static_cast<CustomDataType*>(data);
+    // Handle event
+});
+
+// Emit events
+CustomDataType eventData;
+scene.GetEventSystem().Emit("eventName", &eventData);
+
+4. CUSTOM RENDERING
+------------------
+void Draw() override {
+    // Available Raylib functions:
+    DrawCircle(x, y, radius, color);
+    DrawRectangle(x, y, width, height, color);
+    DrawText(text, x, y, fontSize, color);
+    DrawTexture(texture, x, y, color);
+    DrawLine(startX, startY, endX, endY, color);
+}
+
+5. PHYSICS AND MOVEMENT
+----------------------
+// Frame-independent movement
+float speed = 300.0f;  // pixels per second
+velocity.x = speed * DeltaTime::Get();
+
+// Acceleration
+float acceleration = 500.0f;  // pixels/second^2
+velocity.x += acceleration * DeltaTime::Get();
+
+// Boundary checking
+if (position.x < 0) position.x = 0;
+if (position.x > screenWidth) position.x = screenWidth;
+
+6. RESOURCE MANAGEMENT
+---------------------
+// Load and manage textures
+Texture2D texture = ResourceManager::LoadTexture("path/to/texture.png");
+// Resources auto-cleanup when game ends
+
+7. COLLISION DETECTION
+---------------------
+// Basic collision check
+if (entity1->CheckCollision(*entity2)) {
+    // Handle collision
+}
+
+// Get entity bounds
+Rectangle bounds = entity->GetBounds();
+
+// Custom collision
+bool CustomCollision(const Entity& other) {
+    // Custom collision logic
+    return false;
+}
+
+8. SCENE MANAGEMENT
+------------------
+// Add entities
+auto entity = std::make_shared<CustomEntity>();
+scene.AddEntity(entity);
+
+// Find entities by tag
+auto entities = scene.GetEntitiesByTag("enemyTag");
+
+// Remove entities
+entity->active = false;  // Removed next frame
+
+9. INPUT HANDLING
+----------------
+// Keyboard input
+if (IsKeyDown(KEY_SPACE)) {}     // Continuous
+if (IsKeyPressed(KEY_F1)) {}     // Single press
+if (IsKeyReleased(KEY_E)) {}     // Release
+
+// Mouse input
+if (IsMouseButtonPressed(0)) {}   // Left click
+Vector2 mousePos = GetMousePosition();
+
+// Common Keys:
+KEY_RIGHT, KEY_LEFT, KEY_UP, KEY_DOWN
+KEY_A through KEY_Z
+KEY_ZERO through KEY_NINE
+KEY_F1 through KEY_F12
+KEY_SPACE, KEY_ENTER, KEY_ESCAPE
+
+10. DEBUGGING
+------------
+// Toggle debug mode
+engine.ToggleDebugMode();  // Shows FPS and collision boxes
+
+// Custom debug info
+if (debugMode) {
+    DrawText(debugInfo, x, y, fontSize, WHITE);
+}
+
+11. COMMON PATTERNS
+------------------
+// State Machine
+enum class State { Idle, Moving, Attacking };
+State currentState = State::Idle;
+
+switch(currentState) {
+    case State::Idle:
+        // Idle behavior
+        break;
+    case State::Moving:
+        // Movement behavior
+        break;
+}
+
+// Timer
+float timer = 0.0f;
+timer += DeltaTime::Get();
+if (timer >= 1.0f) {  // 1 second passed
+    // Do something
+    timer = 0.0f;
+}
+
+12. OPTIMIZATION TIPS
+-------------------
+1. Use tags for efficient entity lookup
+2. Remove inactive entities promptly
+3. Implement custom collision for complex shapes
+4. Use frame-independent movement
+5. Batch similar drawing operations
+6. Clean up resources when not needed
+7. Use components for reusable functionality
+
+13. EXTENDING THE ENGINE
+-----------------------
+1. Add new component types for reusable features
+2. Implement custom rendering systems
+3. Add particle systems
+4. Implement sound management
+5. Add scene transitions
+6. Create UI system
+7. Add save/load functionality
+
+Remember:
+- Always use DeltaTime::Get() for smooth movement
+- Clean up resources properly
+- Use the component system for reusable features
+- Leverage the event system for decoupled communication
+- Use debug mode during development
